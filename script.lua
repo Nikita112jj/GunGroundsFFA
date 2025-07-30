@@ -1,83 +1,35 @@
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
-local Window = Rayfield:CreateWindow({
-	Name = "Gun Grounds FFA | Nikita Hub",
-	LoadingTitle = "Загрузка меню...",
-	LoadingSubtitle = "by Nikita",
-	ConfigurationSaving = {Enabled = false},
-	KeySystem = false,
-})
-
-local MovementTab = Window:CreateTab("Movement", 4370345144)
-local EspTab = Window:CreateTab("ESP", 10952945844)
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+local Whitelist = {}
+
+local Window = Rayfield:CreateWindow({
+	Name = "Gun Grounds FFA | Nikita Hub",
+	LoadingTitle = "Загрузка...",
+	LoadingSubtitle = "by Nikita",
+	ConfigurationSaving = {
+		Enabled = true,
+		FolderName = "NikitaHubGG",
+		FileName = "Settings"
+	},
+	KeySystem = false,
+})
+
+local MovementTab = Window:CreateTab("Movement", 0)
+local EspTab = Window:CreateTab("ESP", 0)
+local CombatTab = Window:CreateTab("Combat", 0)
+local AimbotTab = Window:CreateTab("AimBot", 0)
+
 local AimBotEnabled = false
-local AimRadius = 300
+local AimRadius = 15
 local BunnyHopEnabled = false
 local SpeedEnabled = false
 local TargetSpeed = 20
-local EspEnabled = false
-local EspDrawings = {}
-local HitboxSize = 1
-
-MovementTab:CreateToggle({
-	Name = "AimBot",
-	CurrentValue = false,
-	Callback = function(Value)
-		AimBotEnabled = Value
-	end,
-})
-
-MovementTab:CreateSlider({
-	Name = "Aim Radius",
-	Range = {100, 1000},
-	Increment = 10,
-	Suffix = "px",
-	CurrentValue = AimRadius,
-	Callback = function(Value)
-		AimRadius = Value
-	end,
-})
-
-local circle = Drawing.new("Circle")
-circle.Color = Color3.fromRGB(0, 255, 0)
-circle.Thickness = 2
-circle.Filled = false
-circle.Transparency = 1
-circle.Visible = true
-circle.Radius = AimRadius
-circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-
-RunService.RenderStepped:Connect(function()
-	circle.Radius = AimRadius
-	circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-	if AimBotEnabled then
-		local closest = nil
-		local shortest = AimRadius
-		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-				local head = player.Character.Head
-				local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-				if onScreen then
-					local dist = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-					if dist < shortest then
-						shortest = dist
-						closest = player
-					end
-				end
-			end
-		end
-		if closest and closest.Character and closest.Character:FindFirstChild("Head") then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.Head.Position)
-		end
-	end
-end)
+local HitboxSize = 3
+local ESPEnabled = false
 
 MovementTab:CreateToggle({
 	Name = "BunnyHop",
@@ -88,8 +40,7 @@ MovementTab:CreateToggle({
 })
 
 task.spawn(function()
-	while true do
-		task.wait(0.1)
+	while task.wait(0.1) do
 		if BunnyHopEnabled and LocalPlayer.Character then
 			local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 			if hum and hum.FloorMaterial ~= Enum.Material.Air then
@@ -106,14 +57,14 @@ MovementTab:CreateToggle({
 		SpeedEnabled = Value
 		if not Value and LocalPlayer.Character then
 			local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-			if hum then hum.WalkSpeed = 20 end
+			if hum then hum.WalkSpeed = 16 end
 		end
 	end,
 })
 
 MovementTab:CreateSlider({
 	Name = "Speed Value",
-	Range = {20, 100},
+	Range = {20, 60},
 	Increment = 1,
 	Suffix = "Speed",
 	CurrentValue = 20,
@@ -123,8 +74,7 @@ MovementTab:CreateSlider({
 })
 
 task.spawn(function()
-	while true do
-		task.wait()
+	while task.wait(0.1) do
 		if SpeedEnabled and LocalPlayer.Character then
 			local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
 			if hum then hum.WalkSpeed = TargetSpeed end
@@ -136,39 +86,30 @@ EspTab:CreateToggle({
 	Name = "ESP Players",
 	CurrentValue = false,
 	Callback = function(Value)
-		EspEnabled = Value
-		for _, drawing in pairs(EspDrawings) do
-			if drawing.Box then drawing.Box.Visible = Value end
-		end
+		ESPEnabled = Value
 	end,
 })
 
-RunService.RenderStepped:Connect(function()
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-			local head = player.Character.Head
-			local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-			if not EspDrawings[player] then
-				EspDrawings[player] = {
-					Box = Drawing.new("Square")
-				}
-				EspDrawings[player].Box.Color = Color3.fromRGB(0,255,0)
-				EspDrawings[player].Box.Thickness = 1
-				EspDrawings[player].Box.Filled = false
-				EspDrawings[player].Box.Visible = false
+task.spawn(function()
+	while task.wait(1) do
+		if ESPEnabled then
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p ~= LocalPlayer and p.Character and not p.Character:FindFirstChild("PlayerESP") then
+					local h = Instance.new("Highlight")
+					h.Name = "PlayerESP"
+					h.FillColor = Color3.fromRGB(0, 255, 0)
+					h.FillTransparency = 0.5
+					h.OutlineTransparency = 1
+					h.Adornee = p.Character
+					h.Parent = p.Character
+				end
 			end
-			local boxPos, boxOnScreen = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 2.5, 0))
-			local boxSize = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 2.5, 0))
-			if boxOnScreen and EspEnabled then
-				local box = EspDrawings[player].Box
-				box.Size = Vector2.new(math.abs(boxSize.X - boxPos.X), math.abs(boxSize.Y - boxPos.Y))
-				box.Position = Vector2.new(boxPos.X - box.Size.X / 2, boxPos.Y - box.Size.Y / 2)
-				box.Visible = true
-			else
-				EspDrawings[player].Box.Visible = false
+		else
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p.Character and p.Character:FindFirstChild("PlayerESP") then
+					p.Character:FindFirstChild("PlayerESP"):Destroy()
+				end
 			end
-		elseif EspDrawings[player] then
-			EspDrawings[player].Box.Visible = false
 		end
 	end
 end)
@@ -185,12 +126,78 @@ CombatTab:CreateSlider({
 })
 
 RunService.RenderStepped:Connect(function()
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = player.Character.HumanoidRootPart
-			hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
-			hrp.Transparency = 1
-			hrp.CanCollide = false
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			local hrp = p.Character.HumanoidRootPart
+			pcall(function()
+				hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+				hrp.Transparency = 1
+				hrp.CanCollide = false
+			end)
 		end
 	end
 end)
+
+AimbotTab:CreateToggle({
+	Name = "AimBot",
+	CurrentValue = false,
+	Callback = function(Value)
+		AimBotEnabled = Value
+	end,
+})
+
+AimbotTab:CreateSlider({
+	Name = "Aim Radius",
+	Range = {5, 100},
+	Increment = 1,
+	Suffix = "m",
+	CurrentValue = AimRadius,
+	Callback = function(Value)
+		AimRadius = Value
+	end,
+})
+
+RunService.RenderStepped:Connect(function()
+	if not AimBotEnabled then return end
+	local closest, shortest = nil, AimRadius
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and not table.find(Whitelist, p.Name) then
+			local dist = (p.Character.Head.Position - Camera.CFrame.Position).Magnitude
+			if dist <= shortest then
+				shortest = dist
+				closest = p
+			end
+		end
+	end
+	if closest and closest.Character and closest.Character:FindFirstChild("Head") then
+		Camera.CFrame = CFrame.new(Camera.CFrame.Position, closest.Character.Head.Position)
+	end
+end)
+
+for i = 1, 10 do
+	local name = ""
+	AimbotTab:CreateInput({
+		Name = "Whitelist Slot " .. i,
+		PlaceholderText = "Name Player",
+		RemoveTextAfterFocusLost = false,
+		Callback = function(txt)
+			name = txt
+		end,
+	})
+	AimbotTab:CreateToggle({
+		Name = "Whitelist",
+		CurrentValue = false,
+		Callback = function(Value)
+			if Value and not table.find(Whitelist, name) then
+				table.insert(Whitelist, name)
+			elseif not Value then
+				for i, v in ipairs(Whitelist) do
+					if v == name then
+						table.remove(Whitelist, i)
+						break
+					end
+				end
+			end
+		end,
+	})
+end
